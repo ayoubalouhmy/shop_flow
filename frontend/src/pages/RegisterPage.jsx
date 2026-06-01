@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import api from '../utils/api'
 import {
   User,
   Mail,
@@ -123,35 +124,38 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   })
-  const [submitted, setSubmitted] = useState(false)
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = field => e => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const handleSubmit = async e => {
     e.preventDefault()
-    setLoading(true)
-    await new Promise(r => setTimeout(r, 1400)) // simulation
-    setLoading(false)
-    setSubmitted(true)
-  }
+    setError('')
 
-  /* ── Vue succès ── */
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/70 p-10 w-full max-w-[420px] text-center animate-fadeIn">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-50 mb-5">
-            <CheckCircle2 size={32} className="text-green-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Compte créé !</h2>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Bienvenue sur <span className="font-semibold text-[#3653E2]">ShopFlow</span>,{' '}
-            {form.name}. Votre compte a été créé avec succès.
-          </p>
-        </div>
-      </div>
-    )
+    if (form.password !== form.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await api.post('/auth/register', {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        password_confirmation: form.confirmPassword
+      })
+      
+      // Redirection directe vers la page de connexion après succès
+      navigate('/login')
+    } catch (err) {
+      console.error(err)
+      setError(err.response?.data?.message || 'Une erreur est survenue lors de l\'inscription.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -224,10 +228,10 @@ export default function RegisterPage() {
             onChange={handleChange('confirmPassword')}
           />
 
-          {/* Alerte si les mots de passe ne correspondent pas */}
-          {form.confirmPassword && form.password !== form.confirmPassword && (
+          {/* ── Message d'erreur ── */}
+          {(error || (form.confirmPassword && form.password !== form.confirmPassword)) && (
             <p className="text-xs text-red-500 -mt-2">
-              Les mots de passe ne correspondent pas.
+              {error || 'Les mots de passe ne correspondent pas.'}
             </p>
           )}
 

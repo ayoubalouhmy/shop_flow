@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { productsAPI, cartAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import {
   ShoppingBag,
   Moon,
@@ -20,51 +23,25 @@ import {
   Heart
 } from 'lucide-react'
 
-// --- MOCK DATA ---
-const product = {
-  id: 1,
-  name: "Veste en Laine Mérinos Premium",
-  category: "Vêtements d'extérieur",
-  price: 249,
-  rating: 4.9,
-  reviews: 128,
-  badge: "Collection Hiver",
-  description: "Cette veste d'exception allie la chaleur naturelle de la laine mérinos à une coupe contemporaine épurée. Conçue pour durer, elle offre une respirabilité optimale tout en vous protégeant des éléments avec élégance.",
-  features: [
-    "100% Laine Mérinos certifiée",
-    "Coupe ajustée moderne",
-    "Doublure thermique légère",
-    "Poches invisibles découpées au laser"
-  ],
-  colors: [
-    { name: 'Charcoal', hex: '#374151' },
-    { name: 'Marine', hex: '#1E3A8A' },
-    { name: 'Sable', hex: '#D1D5DB' }
-  ],
-  sizes: ['S', 'M', 'L', 'XL'],
-  images: [
-    "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1544022613-e87cd039ce95?auto=format&fit=crop&w=400&q=80",
-    "https://images.unsplash.com/photo-1551028711-031c50728753?auto=format&fit=crop&w=400&q=80",
-    "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?auto=format&fit=crop&w=400&q=80"
-  ]
-}
-
-const similarProducts = [
-  { id: 2, name: "Pull Cachemire Col Roulé", category: "Maille", price: 189, image: "https://images.unsplash.com/photo-1574167132757-1447ae94693e?auto=format&fit=crop&w=600&q=80" },
-  { id: 3, name: "Pantalon Chino Ajusté", category: "Bas", price: 120, image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=600&q=80" },
-  { id: 4, name: "Écharpe Laine & Soie", category: "Accessoires", price: 65, image: "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?auto=format&fit=crop&w=600&q=80" },
-  { id: 5, name: "Gants Cuir Tactiles", category: "Accessoires", price: 85, image: "https://images.unsplash.com/photo-1516930845533-377196751b4c?auto=format&fit=crop&w=600&q=80" }
-]
 
 // --- COMPONENTS ---
 
 const Navbar = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'))
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/75 backdrop-blur-md transition-all duration-300">
+    <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors duration-500 ${isDarkMode ? 'border-slate-800 bg-slate-950/80' : 'border-slate-100 bg-white/75'}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 sm:px-12 lg:px-16">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
@@ -86,7 +63,10 @@ const Navbar = () => {
         {/* Actions */}
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={() => {
+              setIsDarkMode(!isDarkMode);
+              document.documentElement.classList.toggle('dark');
+            }}
             className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100/50 rounded-full transition-all duration-200"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -97,9 +77,30 @@ const Navbar = () => {
             <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#3653E2]" />
           </Link>
 
-          <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-white shadow-sm ml-2">
-            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80" alt="Profile" className="w-full h-full object-cover" />
-          </div>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3 ml-2">
+              <Link 
+                to="/profile"
+                className="w-9 h-9 rounded-full bg-[#3653E2] text-white flex items-center justify-center font-bold text-sm shadow-sm hover:scale-105 transition-transform"
+                title={user?.name}
+              >
+                {user?.name?.charAt(0).toUpperCase()}
+              </Link>
+              <button 
+                onClick={() => { logout(); navigate('/'); }}
+                className="px-3 h-8 rounded-lg bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-500 text-[10px] font-bold transition-colors"
+              >
+                Déconnecter
+              </button>
+            </div>
+          ) : (
+            <Link 
+              to="/login"
+              className="hidden sm:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-[#3653E2] text-white text-xs font-semibold"
+            >
+              Connexion
+            </Link>
+          )}
 
           <button className="md:hidden p-2 text-slate-500" onClick={() => setMobileMenuOpen(true)}>
             <Menu size={24} />
@@ -131,9 +132,9 @@ const Navbar = () => {
   )
 }
 
-const Footer = () => {
+const Footer = ({ isDarkMode }) => {
   return (
-    <footer className="pt-24 pb-12 px-6 sm:px-12 lg:px-16 bg-white border-t border-slate-100">
+    <footer className={`pt-24 pb-12 px-6 sm:px-12 lg:px-16 border-t transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100'}`}>
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 mb-16">
         <div className="lg:col-span-4">
           <Link to="/" className="flex items-center gap-2.5 group mb-6">
@@ -193,10 +194,10 @@ const Footer = () => {
   )
 }
 
-const NewsletterSection = () => {
+const NewsletterSection = ({ isDarkMode }) => {
   return (
-    <section className="py-24 px-6 sm:px-12 lg:px-16">
-      <div className="max-w-7xl mx-auto rounded-[3rem] bg-[#F2F4FD] relative p-12 lg:p-20 overflow-hidden flex flex-col lg:flex-row items-center gap-12">
+    <section className={`py-24 px-6 sm:px-12 lg:px-16 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-white text-slate-900'}`}>
+      <div className={`max-w-7xl mx-auto rounded-[3rem] relative p-12 lg:p-20 overflow-hidden flex flex-col lg:flex-row items-center gap-12 transition-colors duration-500 ${isDarkMode ? 'bg-slate-900 border border-slate-800 shadow-2xl shadow-black/50' : 'bg-[#F2F4FD]'}`}>
         <div className="flex-1 text-left relative z-10">
           <h2 className="text-4xl lg:text-5xl font-extrabold text-[#111827] leading-tight mb-6">
             Rejoignez le cercle ShopFlow.
@@ -230,36 +231,109 @@ const NewsletterSection = () => {
 // --- MAIN PAGE ---
 
 export default function ProductDetailPage() {
+  const { id } = useParams()
+  const [product, setProduct] = useState(null)
+  const [similarProducts, setSimilarProducts] = useState([])
+  const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedColor, setSelectedColor] = useState(0)
   const [selectedSize, setSelectedSize] = useState('M')
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState('details')
+  const [addingToCart, setAddingToCart] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'))
+  const { fetchCart } = useCart()
+  const { isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const res = await productsAPI.getById(id || 1)
+        setProduct(res.data.data)
+        
+        const similarRes = await productsAPI.getAll({ category: res.data.data.category_id, limit: 4 })
+        setSimilarProducts(similarRes.data.data.data.filter(p => p.id !== parseInt(id)))
+      } catch (error) {
+        console.error("Error fetching product detail:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      setAddingToCart(true)
+      await cartAPI.addItem(product.id, quantity)
+      await fetchCart() // Refresh navbar count
+      alert('Produit ajouté au panier !')
+    } catch (error) {
+      console.error("Error adding to cart:", error)
+      alert('Erreur lors de l’ajout au panier.')
+    } finally {
+      setAddingToCart(false)
+    }
+  }
+
+  if (!product && !loading) return <div className="min-h-screen flex items-center justify-center font-bold">Produit introuvable</div>
+
+  const imageUrls = !loading ? (product?.images?.map(img => img.startsWith('http') ? img : `http://localhost:8000/storage/${img}`) || [product?.image || 'https://via.placeholder.com/600x800']) : []
 
   return (
-    <div className="min-h-screen bg-white font-sans text-[#111827] selection:bg-[#3653E2]/10 selection:text-[#3653E2]">
+    <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'} selection:bg-[#3653E2]/10 selection:text-[#3653E2] font-sans`}>
       <Navbar />
 
-      {/* Breadcrumb */}
+      {/* Breadcrumb Skeleton / Content */}
       <nav className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 pt-8 pb-4">
-        <ul className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[#6B7280] uppercase">
-          <li><Link to="/shop" className="hover:text-[#3653E2] transition-colors">Boutique</Link></li>
-          <li><ChevronRight size={10} strokeWidth={3} /></li>
-          <li><Link to="#" className="hover:text-[#3653E2] transition-colors">{product.category}</Link></li>
-          <li><ChevronRight size={10} strokeWidth={3} /></li>
-          <li className="text-[#111827] truncate max-w-[150px] sm:max-w-none">{product.name}</li>
-        </ul>
+        {loading ? (
+          <div className="h-3 w-48 bg-slate-200/50 animate-pulse rounded" />
+        ) : (
+          <ul className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[#6B7280] uppercase">
+            <li><Link to="/shop" className="hover:text-[#3653E2] transition-colors">Boutique</Link></li>
+            <li><ChevronRight size={10} strokeWidth={3} /></li>
+            <li><Link to="#" className="hover:text-[#3653E2] transition-colors">{product.category?.name || 'Général'}</Link></li>
+            <li><ChevronRight size={10} strokeWidth={3} /></li>
+            <li className="text-[#111827] truncate max-w-[150px] sm:max-w-none">{product.name}</li>
+          </ul>
+        )}
       </nav>
 
       {/* Main Product Section */}
       <main className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 animate-pulse">
+             <div className="lg:col-span-7 aspect-[4/5] bg-slate-100 rounded-[24px]" />
+             <div className="lg:col-span-5 space-y-8">
+                <div className="h-6 w-24 bg-slate-100 rounded-full" />
+                <div className="h-12 w-3/4 bg-slate-100 rounded" />
+                <div className="h-6 w-1/4 bg-slate-100 rounded" />
+                <div className="h-32 w-full bg-slate-100 rounded" />
+                <div className="h-16 w-full bg-slate-100 rounded-2xl" />
+             </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
           
           {/* Gallery - Column Left */}
           <div className="lg:col-span-7 flex flex-col md:flex-row gap-6">
             {/* Thumbnails */}
             <div className="flex md:flex-col gap-4 order-2 md:order-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {product.images.map((img, idx) => (
+              {imageUrls.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
@@ -281,7 +355,7 @@ export default function ProductDetailPage() {
                 className="relative aspect-[4/5] rounded-[24px] overflow-hidden bg-slate-50 group border border-slate-100"
               >
                 <img
-                  src={product.images[selectedImage]}
+                  src={imageUrls[selectedImage]}
                   alt="Product Main"
                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
@@ -329,19 +403,21 @@ export default function ProductDetailPage() {
               <div>
                 <h4 className="text-sm font-bold uppercase tracking-widest text-slate-900 mb-5">Couleurs</h4>
                 <div className="flex items-center gap-4">
-                  {product.colors.map((color, idx) => (
+                  {(product.colors || []).map((color, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedColor(idx)}
                       className={`relative w-10 h-10 rounded-full transition-all duration-300 flex items-center justify-center ${
                         selectedColor === idx ? 'ring-2 ring-[#3653E2] ring-offset-2' : ''
                       }`}
-                      style={{ backgroundColor: color.hex }}
+                      style={{ backgroundColor: color.hex || color }}
                     >
                       {selectedColor === idx && <div className="w-2 h-2 rounded-full bg-white opacity-40" />}
                     </button>
                   ))}
-                  <span className="text-sm font-medium text-slate-400 ml-2">{product.colors[selectedColor].name}</span>
+                  {product.colors && product.colors.length > 0 && (
+                    <span className="text-sm font-medium text-slate-400 ml-2">{product.colors[selectedColor].name || product.colors[selectedColor]}</span>
+                  )}
                 </div>
               </div>
 
@@ -352,7 +428,7 @@ export default function ProductDetailPage() {
                   <button className="text-xs font-bold text-[#3653E2] hover:underline underline-offset-4">Guide des tailles</button>
                 </div>
                 <div className="flex items-center gap-3">
-                  {product.sizes.map((size) => (
+                  {(product.sizes || ['S', 'M', 'L', 'XL']).map((size) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
@@ -390,9 +466,13 @@ export default function ProductDetailPage() {
             </div>
 
             {/* CTA Button */}
-            <button className="w-full h-16 bg-[#3653E2] hover:bg-[#2a44c8] active:bg-[#2035a8] text-white rounded-[20px] font-bold text-lg shadow-xl shadow-[#3653E2]/20 transition-all duration-300 flex items-center justify-center gap-3 mb-8 group">
-               Ajouter au panier
-               <ShoppingBag size={20} className="group-hover:translate-x-1 transition-transform" />
+            <button 
+              onClick={handleAddToCart}
+              disabled={addingToCart}
+              className={`w-full h-16 bg-[#3653E2] hover:bg-[#2a44c8] active:bg-[#2035a8] text-white rounded-[20px] font-bold text-lg shadow-xl shadow-[#3653E2]/20 transition-all duration-300 flex items-center justify-center gap-3 mb-8 group ${addingToCart ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+               {addingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
+               {!addingToCart && <ShoppingBag size={20} className="group-hover:translate-x-1 transition-transform" />}
             </button>
 
             {/* Trust Badges */}
@@ -408,12 +488,13 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+      )}
       </main>
 
       {/* Features Section */}
-      <section className="bg-white py-12 px-6 sm:px-12 lg:px-16 border-y border-slate-50">
+      <section className={`py-12 px-6 sm:px-12 lg:px-16 border-y transition-colors duration-500 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50'}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-8 rounded-[20px] bg-white border border-slate-100 hover:shadow-xl hover:shadow-slate-100/60 transition-all duration-500 group flex flex-col items-center text-center">
+          <div className={`p-8 rounded-[20px] border transition-all duration-500 group flex flex-col items-center text-center ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:shadow-xl hover:shadow-black/60' : 'bg-white border-slate-100 hover:shadow-xl hover:shadow-slate-100/60'}`}>
             <div className="w-14 h-14 rounded-2xl bg-[#3653E2]/5 text-[#3653E2] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                <Truck size={24} />
             </div>
@@ -421,7 +502,7 @@ export default function ProductDetailPage() {
             <p className="text-sm text-slate-500">Livraison à domicile en 24/48h par nos partenaires premium.</p>
           </div>
 
-          <div className="p-8 rounded-[20px] bg-white border border-slate-100 hover:shadow-xl hover:shadow-slate-100/60 transition-all duration-500 group flex flex-col items-center text-center">
+          <div className={`p-8 rounded-[20px] border transition-all duration-500 group flex flex-col items-center text-center ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:shadow-xl hover:shadow-black/60' : 'bg-white border-slate-100 hover:shadow-xl hover:shadow-slate-100/60'}`}>
             <div className="w-14 h-14 rounded-2xl bg-[#3653E2]/5 text-[#3653E2] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                <RefreshCw size={24} />
             </div>
@@ -429,7 +510,7 @@ export default function ProductDetailPage() {
             <p className="text-sm text-slate-500">Pas convaincu ? Retournez votre article sans frais de retour.</p>
           </div>
 
-          <div className="p-8 rounded-[20px] bg-white border border-slate-100 hover:shadow-xl hover:shadow-slate-100/60 transition-all duration-500 group flex flex-col items-center text-center">
+          <div className={`p-8 rounded-[20px] border transition-all duration-500 group flex flex-col items-center text-center ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:shadow-xl hover:shadow-black/60' : 'bg-white border-slate-100 hover:shadow-xl hover:shadow-slate-100/60'}`}>
             <div className="w-14 h-14 rounded-2xl bg-[#3653E2]/5 text-[#3653E2] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                <ShieldCheck size={24} />
             </div>
@@ -440,7 +521,7 @@ export default function ProductDetailPage() {
       </section>
 
       {/* Tabs Section */}
-      <section className="py-24 px-6 sm:px-12 lg:px-16 bg-white overflow-hidden">
+      <section className={`py-24 px-6 sm:px-12 lg:px-16 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-white text-slate-900'} overflow-hidden`}>
         <div className="max-w-4xl mx-auto">
            {/* Tab Headers */}
            <div className="flex items-center gap-12 border-b border-slate-100 mb-12 overflow-x-auto pb-px">
@@ -474,18 +555,18 @@ export default function ProductDetailPage() {
              animate={{ opacity: 1, y: 0 }}
              className="text-slate-500 leading-relaxed"
            >
-             {activeTab === 'details' && (
+             {!loading && product && activeTab === 'details' && (
                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                  <div>
-                   <p className="mb-6">{product.description}</p>
-                   <ul className="space-y-4">
-                     {product.features.map((f, i) => (
-                       <li key={i} className="flex items-center gap-3">
-                         <div className="w-1.5 h-1.5 rounded-full bg-[#3653E2]" />
-                         <span className="text-sm font-medium">{f}</span>
-                       </li>
-                     ))}
-                   </ul>
+                   <p className="mb-6">{product?.description}</p>
+                    <ul className="space-y-4">
+                      {(product?.features || []).map((f, i) => (
+                        <li key={i} className="flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#3653E2]" />
+                          <span className="text-sm font-medium">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
                  </div>
                  <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100">
                     <h5 className="font-bold text-[#111827] mb-4">Points techniques</h5>
@@ -521,28 +602,40 @@ export default function ProductDetailPage() {
       </section>
 
       {/* Similar Products */}
-      <section className="py-24 px-6 sm:px-12 lg:px-16 bg-slate-50">
+      <section className={`py-24 px-6 sm:px-12 lg:px-16 transition-colors duration-500 ${isDarkMode ? 'bg-slate-900/40 text-white' : 'bg-slate-50 text-slate-900'}`}>
         <div className="max-w-7xl mx-auto text-center mb-16">
           <h2 className="text-3xl font-extrabold text-[#111827] mb-4 tracking-tight">Vous aimerez aussi</h2>
           <p className="text-slate-500 text-sm">Complétez votre look avec notre sélection exclusive.</p>
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {similarProducts.map((p) => (
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-left">
+          {loading ? (
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-3xl h-[300px] bg-slate-100 animate-pulse" />
+            ))
+          ) : similarProducts.map((p) => (
             <motion.div
               key={p.id}
               whileHover={{ y: -10 }}
-              className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500"
+              className={`group rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 ${isDarkMode ? 'bg-slate-900 border border-slate-800' : 'bg-white'}`}
             >
               <div className="aspect-square overflow-hidden bg-slate-50">
-                <img src={p.image} alt={p.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img 
+                  src={p.images && p.images.length > 0 
+                    ? (p.images[0].startsWith('http') ? p.images[0] : `http://localhost:8000/storage/${p.images[0]}`) 
+                    : 'https://via.placeholder.com/400'} 
+                  alt={p.name} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                />
               </div>
               <div className="p-6">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{p.category}</p>
-                <h4 className="font-bold text-sm text-[#111827] mb-3 group-hover:text-[#3653E2] transition-colors">{p.name}</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{p.category?.name || 'Général'}</p>
+                <h4 className={`font-bold text-sm mb-3 group-hover:text-[#3653E2] transition-colors ${isDarkMode ? 'text-white' : 'text-[#111827]'}`}>{p.name}</h4>
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-sm">{p.price}€</span>
-                  <button className="h-8 px-4 border border-slate-100 rounded-lg text-xs font-bold hover:bg-[#3653E2] hover:text-white hover:border-[#3653E2] transition-all">Détails</button>
+                  <button className={`h-8 px-4 border rounded-lg text-xs font-bold hover:bg-[#3653E2] hover:text-white hover:border-[#3653E2] transition-all ${isDarkMode ? 'border-slate-800 text-slate-300' : 'border-slate-100 text-slate-900'}`}>
+                    Détails
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -557,8 +650,8 @@ export default function ProductDetailPage() {
         </div>
       </section>
 
-      <NewsletterSection />
-      <Footer />
+      <NewsletterSection isDarkMode={isDarkMode} />
+      <Footer isDarkMode={isDarkMode} />
     </div>
   )
 }

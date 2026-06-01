@@ -1,16 +1,21 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import {
   ShoppingBag,
-  Heart,
   ArrowRight,
   Truck,
   ShieldCheck,
   RefreshCw,
   Mail,
   ChevronRight,
-  Star
+  Star,
+  Sun,
+  Moon
 } from 'lucide-react'
+import { productsAPI, categoriesAPI } from '../services/api'
 
 // Variants d'animation Framer Motion réutilisables
 const fadeInUp = {
@@ -27,51 +32,46 @@ const staggerContainer = {
 }
 
 export default function LandingPage() {
-  // Liste des produits vedettes
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Chemise Lin Épurée",
-      category: "Mode Femme",
-      price: "89,00 €",
-      image: "/product_1.png",
-      badge: "Best Seller",
-      rating: 4.9
-    },
-    {
-      id: 2,
-      name: "Vase Céramique Japandi",
-      category: "Décoration",
-      price: "45,00 €",
-      image: "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=600&q=80",
-      badge: "Nouveau",
-      rating: 4.8
-    },
-    {
-      id: 3,
-      name: "Sac Cabas Caramel",
-      category: "Accessoires",
-      price: "189,00 €",
-      image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80",
-      badge: "Best Seller",
-      rating: 5.0
-    },
-    {
-      id: 4,
-      name: "Collier Goutte d'Or",
-      category: "Accessoires",
-      price: "120,00 €",
-      image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80",
-      badge: "Nouveau",
-      rating: 4.7
+  const navigate = useNavigate();
+  const { isAuthenticated, logout, user } = useAuth();
+  const { cartCount } = useCart();
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'))
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
+  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchLandingData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          productsAPI.getAll({ limit: 4 }),
+          categoriesAPI.getAll()
+        ])
+        setFeaturedProducts(prodRes.data.data.data.slice(0, 4) || [])
+        setCategories(catRes.data.data.slice(0, 3) || [])
+      } catch (error) {
+        console.error("Error fetching landing data:", error)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+    fetchLandingData()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-slate-50 text-[#171a1f] selection:bg-[#3653E2]/10 selection:text-[#3653E2] font-sans">
+    <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-[#171a1f]'} selection:bg-[#3653E2]/10 selection:text-[#3653E2] font-sans`}>
 
       {/* ─── NAVBAR STICKY WITH BLUR ─── */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/75 backdrop-blur-md transition-all duration-300">
+      <header className={`sticky top-0 z-50 w-full border-b transition-colors duration-500 ${isDarkMode ? 'border-slate-800 bg-slate-950/80' : 'border-slate-100 bg-white/75'} backdrop-blur-md`}>
         <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 h-20 flex items-center justify-between">
 
           {/* Logo */}
@@ -79,7 +79,7 @@ export default function LandingPage() {
             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#3653E2] shadow-md shadow-[#3653E2]/25 group-hover:scale-105 transition-transform duration-300">
               <ShoppingBag size={18} className="text-white" strokeWidth={2} />
             </div>
-            <span className="font-bold text-lg tracking-tight text-[#171a1f]">
+            <span className={`font-bold text-lg tracking-tight ${isDarkMode ? 'text-white' : 'text-[#171a1f]'}`}>
               Shop<span className="text-[#3653E2]">Flow</span>
             </span>
           </Link>
@@ -93,25 +93,55 @@ export default function LandingPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100/50 rounded-full transition-all duration-200" aria-label="Favoris">
-              <Heart size={20} strokeWidth={1.8} />
+            <button 
+              onClick={() => {
+                setIsDarkMode(!isDarkMode);
+                document.documentElement.classList.toggle('dark');
+              }}
+              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100/50 rounded-full transition-all duration-200"
+              aria-label="Thème"
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             <Link to="/cart" className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100/50 rounded-full relative transition-all duration-200" aria-label="Panier">
               <ShoppingBag size={20} strokeWidth={1.8} />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#3653E2]" />
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#3653E2] text-white text-[9px] flex items-center justify-center font-bold">{cartCount}</span>
+              )}
             </Link>
-            <Link
-              to="/login"
-              className="
-                hidden sm:inline-flex items-center justify-center h-10 px-5 rounded-xl
-                bg-[#3653E2] hover:bg-[#2a44c8] active:bg-[#2035a8]
-                text-white text-sm font-semibold
-                shadow-lg shadow-[#3653E2]/15 hover:shadow-xl hover:shadow-[#3653E2]/25
-                transition-all duration-200 hover:-translate-y-0.5
-              "
-            >
-              Se connecter
-            </Link>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3 ml-2">
+                <Link 
+                  to="/profile"
+                  className="w-10 h-10 rounded-full bg-[#3653E2] text-white flex items-center justify-center font-bold shadow-lg shadow-[#3653E2]/20 hover:scale-105 transition-transform"
+                  title={user?.name}
+                >
+                  {user?.name?.charAt(0).toUpperCase()}
+                </Link>
+                <button 
+                  onClick={() => { logout(); navigate('/'); }}
+                  className="
+                    px-4 h-9 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600
+                    text-xs font-bold transition-all duration-200
+                  "
+                >
+                  Déconnecter
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="
+                  hidden sm:inline-flex items-center justify-center h-10 px-5 rounded-xl
+                  bg-[#3653E2] hover:bg-[#2a44c8] active:bg-[#2035a8]
+                  text-white text-sm font-semibold
+                  shadow-lg shadow-[#3653E2]/15 hover:shadow-xl hover:shadow-[#3653E2]/25
+                  transition-all duration-200 hover:-translate-y-0.5
+                "
+              >
+                Se connecter
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -293,61 +323,31 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-            {/* Card Catégorie 1 */}
-            <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
-              <img
-                src="/category_fashion.png"
-                alt="Mode Femme"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8" />
-              <div className="absolute bottom-0 left-0 w-full p-8 z-10">
-                <p className="text-[#fdeddd] text-xs font-semibold tracking-wider uppercase mb-1">Collection</p>
-                <h3 className="text-white text-2xl font-bold mb-4">Mode Femme</h3>
-                <button className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-semibold hover:bg-[#fdeddd] hover:text-[#3653E2] transition-colors duration-200">
-                  Explorer
-                  <ChevronRight size={14} strokeWidth={2.5} />
-                </button>
+            {loading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="rounded-3xl aspect-[4/5] bg-slate-100 animate-pulse" />
+              ))
+            ) : categories.map((category) => (
+              <div key={category.id} className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
+                <img
+                  src={category.image?.startsWith('http') ? category.image : `http://localhost:8000/storage/${category.image}`}
+                  alt={category.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8" />
+                <div className="absolute bottom-0 left-0 w-full p-8 z-10">
+                  <p className="text-[#fdeddd] text-xs font-semibold tracking-wider uppercase mb-1">Collection</p>
+                  <h3 className="text-white text-2xl font-bold mb-4">{category.name}</h3>
+                  <Link 
+                    to={`/shop?category_id=${category.id}`} 
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-semibold hover:bg-[#fdeddd] hover:text-[#3653E2] transition-colors duration-200"
+                  >
+                    Explorer
+                    <ChevronRight size={14} strokeWidth={2.5} />
+                  </Link>
+                </div>
               </div>
-            </div>
-
-            {/* Card Catégorie 2 */}
-            <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
-              <img
-                src="/category_decor.png"
-                alt="Décoration"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8" />
-              <div className="absolute bottom-0 left-0 w-full p-8 z-10">
-                <p className="text-[#fdeddd] text-xs font-semibold tracking-wider uppercase mb-1">Intérieur</p>
-                <h3 className="text-white text-2xl font-bold mb-4">Décoration</h3>
-                <button className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-semibold hover:bg-[#fdeddd] hover:text-[#3653E2] transition-colors duration-200">
-                  Explorer
-                  <ChevronRight size={14} strokeWidth={2.5} />
-                </button>
-              </div>
-            </div>
-
-            {/* Card Catégorie 3 */}
-            <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
-              <img
-                src="/category_accessories.png"
-                alt="Accessoires"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8" />
-              <div className="absolute bottom-0 left-0 w-full p-8 z-10">
-                <p className="text-[#fdeddd] text-xs font-semibold tracking-wider uppercase mb-1">Détails</p>
-                <h3 className="text-white text-2xl font-bold mb-4">Accessoires</h3>
-                <button className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-semibold hover:bg-[#fdeddd] hover:text-[#3653E2] transition-colors duration-200">
-                  Explorer
-                  <ChevronRight size={14} strokeWidth={2.5} />
-                </button>
-              </div>
-            </div>
-
+            ))}
           </div>
         </div>
       </section>
@@ -361,24 +361,29 @@ export default function LandingPage() {
               <h2 className="text-3xl font-extrabold tracking-tight text-[#171a1f]">Nos Pièces Vedettes</h2>
               <p className="text-slate-500 text-sm mt-2">L'esthétique minimaliste alliée aux matières les plus nobles.</p>
             </div>
-            <button className="group inline-flex items-center gap-1.5 font-bold text-sm text-[#3653E2] hover:text-[#2a44c8] transition-colors">
+            <Link to="/shop" className="group inline-flex items-center gap-1.5 font-bold text-sm text-[#3653E2] hover:text-[#2a44c8] transition-colors">
               Voir tous les produits
               <ArrowRight size={16} strokeWidth={2.2} className="transform group-hover:translate-x-1 transition-transform" />
-            </button>
+            </Link>
           </div>
 
           {/* Grid Produits */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product) => (
+            {loading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-3xl h-[400px] bg-slate-100 animate-pulse" />
+              ))
+            ) : featuredProducts.map((product) => (
               <motion.div
                 key={product.id}
-                className="group flex flex-col bg-white rounded-3xl border border-slate-100/80 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
-                whileHover={{ y: -5 }}
+                className={`group flex flex-col rounded-3xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100/80'}`}
+              whileHover={{ y: -5 }}
               >
-                {/* Image Conteneur */}
-                <Link to="/product" className="relative aspect-[3/4] overflow-hidden bg-slate-50 block">
+                <Link to={`/product/${product.id}`} className="relative aspect-[3/4] overflow-hidden bg-slate-50 block w-full">
                   <img
-                    src={product.image}
+                    src={product.images && product.images.length > 0
+                      ? (product.images[0].startsWith('http') ? product.images[0] : `http://localhost:8000/storage/${product.images[0]}`)
+                      : 'https://via.placeholder.com/400'}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
@@ -392,9 +397,9 @@ export default function LandingPage() {
 
                 {/* Détails Produit */}
                 <div className="p-5 flex flex-col flex-1">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{product.category}</p>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{product.category?.name || 'Général'}</p>
                   <Link to="/product">
-                    <h3 className="text-slate-800 font-bold text-sm mt-1 hover:text-[#3653E2] transition-colors duration-150 cursor-pointer">
+                    <h3 className={`font-bold text-sm mt-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-800'} hover:text-[#3653E2] transition-colors duration-150 cursor-pointer`}>
                       {product.name}
                     </h3>
                   </Link>
@@ -504,8 +509,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer className="bg-white border-t border-slate-100 py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-10">
+      <footer className={`mt-20 pt-24 pb-12 px-6 sm:px-12 lg:px-16 border-t transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100'}`}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
 
           {/* Logo + Description */}
           <div className="md:col-span-4 flex flex-col items-start">
@@ -513,7 +518,7 @@ export default function LandingPage() {
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#3653E2] shadow-md shadow-[#3653E2]/25">
                 <ShoppingBag size={15} className="text-white" strokeWidth={2} />
               </div>
-              <span className="font-bold text-base tracking-tight text-[#171a1f]">
+              <span className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-[#171a1f]'}`}>
                 Shop<span className="text-[#3653E2]">Flow</span>
               </span>
             </Link>
@@ -544,16 +549,16 @@ export default function LandingPage() {
 
           {/* Liens Utiles */}
           <div className="md:col-span-2 text-left">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 mb-4">Navigation</h4>
+            <h4 className={`font-bold text-xs uppercase tracking-wider mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Navigation</h4>
             <ul className="space-y-2.5 text-xs text-slate-500">
               <li><Link to="/" className="hover:text-slate-900 transition-colors">Accueil</Link></li>
-              <li><a href="#produits" className="hover:text-slate-900 transition-colors">Produits</a></li>
+              <li><Link to="/shop" className="hover:text-slate-900 transition-colors">Produits</Link></li>
               <li><a href="#propos" className="hover:text-slate-900 transition-colors">À propos</a></li>
             </ul>
           </div>
 
           <div className="md:col-span-2 text-left">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 mb-4">Assistance</h4>
+            <h4 className={`font-bold text-xs uppercase tracking-wider mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Assistance</h4>
             <ul className="space-y-2.5 text-xs text-slate-500">
               <li><a href="#" className="hover:text-slate-900 transition-colors">Livraison & Retours</a></li>
               <li><a href="#" className="hover:text-slate-900 transition-colors">FAQ</a></li>
@@ -564,7 +569,7 @@ export default function LandingPage() {
 
           {/* Newsletter Mini */}
           <div className="md:col-span-4 text-left">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 mb-4">Newsletter</h4>
+            <h4 className={`font-bold text-xs uppercase tracking-wider mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Newsletter</h4>
             <p className="text-xs text-slate-500 mb-3 leading-relaxed">
               Inscrivez-vous pour recevoir des offres exclusives.
             </p>
@@ -572,11 +577,11 @@ export default function LandingPage() {
               <input
                 type="email"
                 placeholder="Votre email"
-                className="
-                  flex-1 h-9 px-3 rounded-lg bg-slate-50 border border-slate-200/80
-                  text-xs text-slate-800 placeholder-slate-400 outline-none
-                  focus:border-[#3653E2] transition-all
-                "
+                className={`
+                  flex-1 h-9 px-3 rounded-lg border text-xs placeholder-slate-400 outline-none transition-all
+                  ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200/80 text-slate-800'}
+                  focus:border-[#3653E2]
+                `}
               />
               <button
                 type="submit"
@@ -589,7 +594,7 @@ export default function LandingPage() {
 
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 border-t border-slate-100 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+        <div className="max-w-7xl mx-auto border-t border-slate-100 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
           <p>© {new Date().getFullYear()} ShopFlow. Tous droits réservés. Conçu avec soin pour une expérience moderne.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-slate-700 transition-colors">Politique de confidentialité</a>

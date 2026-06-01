@@ -19,3 +19,13 @@
 .animate-fadeIn {
   animation: fadeIn 0.45s ease-out both;
 }
+
+/* Mode sombre global */
+html.dark {
+  background-color: #020617;
+}
+
+html.dark body {
+  background-color: #020617;
+  color: #f8fafc;
+}
