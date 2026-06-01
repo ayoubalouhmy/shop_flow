@@ -20,6 +20,11 @@ class User extends Authenticatable
         'password',
         'role',
         'avatar',
+        'phone',
+        'birthday',
+        'loyalty_points',
+        'total_savings',
+        'member_since',
     ];
 
     protected $hidden = [
@@ -32,6 +37,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'birthday'          => 'date',
+            'loyalty_points'    => 'integer',
+            'total_savings'     => 'decimal:2',
+            'member_since'      => 'datetime',
         ];
     }
 

@@ -20,10 +20,11 @@ class AuthController extends Controller
     {
         try {
             $user  = User::create([
-                'name'     => $request->name,
-                'email'    => $request->email,
-                'password' => Hash::make($request->password),
-                'role'     => 'client',
+                'name'         => $request->name,
+                'email'        => $request->email,
+                'password'     => Hash::make($request->password),
+                'role'         => 'client',
+                'member_since' => now(),
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -86,6 +87,8 @@ class AuthController extends Controller
         try {
             $validated = $request->validate([
                 'name'     => 'sometimes|string|max:255',
+                'phone'    => 'sometimes|nullable|string|max:20',
+                'birthday' => 'sometimes|nullable|date',
                 'avatar'   => 'sometimes|nullable|image|max:2048',
                 'password' => ['sometimes', 'confirmed', Password::min(8)],
             ]);
