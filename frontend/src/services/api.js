@@ -2,7 +2,6 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
-// Créer une instance axios avec la configuration de base
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -11,21 +10,21 @@ const apiClient = axios.create({
   },
 })
 
-// Ajouter le token aux requêtes si disponible
+// Attach auth token to every request
 apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('auth_token')
+  const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-// Gérer les erreurs de réponse
+// Global 401 handler → redirect to login
 apiClient.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
+      localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
@@ -33,59 +32,73 @@ apiClient.interceptors.response.use(
   }
 )
 
-export const authAPI = {
-  login: (email, password) => 
-    apiClient.post('/auth/login', { email, password }),
-  
-  register: (name, email, password, password_confirmation) =>
-    apiClient.post('/auth/register', { name, email, password, password_confirmation }),
-  
-  logout: () =>
-    apiClient.post('/auth/logout'),
-  
-  profile: () =>
-    apiClient.get('/auth/profile'),
-}
-
+// ── Products ──────────────────────────────────────────────────────────────────
 export const productsAPI = {
-  getAll: (page = 1) =>
-    apiClient.get('/products', { params: { page } }),
-  
+  getAll: (params = {}) =>
+    apiClient.get('/products', { params }),               // GET /api/products
+
   getById: (id) =>
-    apiClient.get(`/products/${id}`),
+    apiClient.get(`/products/${id}`),                     // GET /api/products/:id
 }
 
+// ── Categories ────────────────────────────────────────────────────────────────
 export const categoriesAPI = {
   getAll: () =>
-    apiClient.get('/categories'),
-  
+    apiClient.get('/categories'),                         // GET /api/categories
+
   getById: (id) =>
-    apiClient.get(`/categories/${id}`),
+    apiClient.get(`/categories/${id}`),                   // GET /api/categories/:id
 }
 
+// ── Cart (auth required) ──────────────────────────────────────────────────────
 export const cartAPI = {
   getCart: () =>
-    apiClient.get('/cart'),
-  
-  addItem: (productId, quantity) =>
-    apiClient.post('/cart/items', { product_id: productId, quantity }),
-  
-  removeItem: (itemId) =>
-    apiClient.delete(`/cart/items/${itemId}`),
-  
-  updateItem: (itemId, quantity) =>
-    apiClient.put(`/cart/items/${itemId}`, { quantity }),
+    apiClient.get('/cart'),                               // GET /api/cart
+
+  addItem: (productId, quantity = 1) =>
+    apiClient.post('/cart', { product_id: productId, quantity }), // POST /api/cart
+
+  updateItem: (cartItemId, quantity) =>
+    apiClient.put(`/cart/${cartItemId}`, { quantity }),   // PUT  /api/cart/:id
+
+  removeItem: (cartItemId) =>
+    apiClient.delete(`/cart/${cartItemId}`),              // DELETE /api/cart/:id
+
+  clear: () =>
+    apiClient.delete('/cart'),                            // DELETE /api/cart
 }
 
+// ── Orders (auth required) ────────────────────────────────────────────────────
 export const ordersAPI = {
-  getAll: () =>
-    apiClient.get('/orders'),
-  
+  getAll: (params = {}) =>
+    apiClient.get('/orders', { params }),                 // GET /api/orders
+
   getById: (id) =>
-    apiClient.get(`/orders/${id}`),
-  
+    apiClient.get(`/orders/${id}`),                       // GET /api/orders/:id
+
   create: (data) =>
-    apiClient.post('/orders', data),
+    apiClient.post('/orders', data),                      // POST /api/orders
+
+  cancel: (id) =>
+    apiClient.post(`/orders/${id}/cancel`),               // POST /api/orders/:id/cancel
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export const authAPI = {
+  login: (email, password) =>
+    apiClient.post('/auth/login', { email, password }),
+
+  register: (name, email, password, password_confirmation) =>
+    apiClient.post('/auth/register', { name, email, password, password_confirmation }),
+
+  logout: () =>
+    apiClient.post('/auth/logout'),
+
+  profile: () =>
+    apiClient.get('/auth/profile'),
+
+  updateProfile: (data) =>
+    apiClient.put('/auth/profile', data),
 }
 
 export default apiClient

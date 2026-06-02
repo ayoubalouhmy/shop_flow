@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import api from '../utils/api'
 import {
   Mail,
   Lock,
@@ -79,9 +81,9 @@ function PasswordField({ id, label, placeholder, value, onChange }) {
 /* ─── Page Login ─── */
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
 
   const handleChange = field => e => {
@@ -91,32 +93,30 @@ export default function LoginPage() {
 
   const handleSubmit = async e => {
     e.preventDefault()
-    if (!form.email || !form.password) {
-      setError('Veuillez remplir tous les champs.')
-      return
-    }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1400)) // simulation
-    setLoading(false)
-    setSubmitted(true)
-  }
-
-  /* ── Vue succès ── */
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/70 p-10 w-full max-w-[420px] text-center animate-fadeIn">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#3653E2]/10 mb-5">
-            <CheckCircle2 size={32} className="text-[#3653E2]" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Connexion réussie !</h2>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Bienvenue sur <span className="font-semibold text-[#3653E2]">ShopFlow</span>.
-            Vous êtes maintenant connecté.
-          </p>
-        </div>
-      </div>
-    )
+    try {
+      const response = await api.post('/auth/login', {
+        email: form.email,
+        password: form.password
+      })
+      
+      const { user: userData, token } = response.data.data
+      
+      // Sauvegarder le token
+      localStorage.setItem('token', token)
+      
+      login(userData)
+      
+      setLoading(false)
+      
+      
+      // Redirection directe vers l'accueil
+      navigate('/')
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+      setError(err.response?.data?.message || 'Identifiants invalides.')
+    }
   }
 
   return (
