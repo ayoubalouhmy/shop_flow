@@ -20,7 +20,7 @@ class ProductController extends Controller
                 ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
                 ->when($request->has('is_active'), fn($q) => $q->where('is_active', $request->boolean('is_active')))
                 ->when($request->trashed === 'true', fn($q) => $q->onlyTrashed())
-                ->latest()->paginate($request->get('per_page', 20));
+                ->latest()->get();
 
             return response()->json(['success' => true, 'data' => $products]);
         } catch (\Throwable $e) {
