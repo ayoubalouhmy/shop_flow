@@ -44,6 +44,110 @@ const sidebarItems = [
   { icon: Bell, label: 'Préférences notifications', id: 'notifications' },
 ]
 
+function OrdersTable({ orders, loading }) {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-16 rounded-2xl bg-slate-50 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-20 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50">
+        <Package size={48} className="mx-auto text-slate-300 mb-6" />
+        <h3 className="text-xl font-bold text-[#111827] mb-2">Aucune commande</h3>
+        <p className="text-slate-500 mb-8">Vous n'avez pas encore passé de commande.</p>
+        <Link
+          to="/shop"
+          className="inline-flex h-12 px-8 rounded-xl bg-[#3653E2] text-white font-bold items-center shadow-lg shadow-[#3653E2]/20 hover:scale-105 transition-all"
+        >
+          Commencer mes achats
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-50">
+            <th className="pb-4 font-bold">N° Commande</th>
+            <th className="pb-4 font-bold">Articles</th>
+            <th className="pb-4 font-bold">Date</th>
+            <th className="pb-4 font-bold">Statut</th>
+            <th className="pb-4 font-bold">Total</th>
+            <th className="pb-4 font-bold text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {orders.map((order) => (
+            <tr key={order.id} className="group hover:bg-slate-50/50 transition-colors">
+              <td className="py-5 font-bold text-sm text-[#3653E2]">#{order.id}</td>
+              <td className="py-5">
+                <div className="flex items-center gap-2">
+                  {(order.items || []).slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                      <img
+                        src={item.product?.images?.[0] 
+                          ? (item.product.images[0].startsWith('http') ? item.product.images[0] : `http://localhost:8000/storage/${item.product.images[0]}`) 
+                          : 'https://via.placeholder.com/40'}
+                        alt={item.product?.name || 'Produit'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {(order.items || []).length > 3 && (
+                    <span className="text-xs font-bold text-slate-400">+{(order.items || []).length - 3}</span>
+                  )}
+                  <div className="ml-1">
+                    <p className="text-xs font-bold text-slate-800 line-clamp-1">
+                      {order.items?.[0]?.product?.name || 'Commande'}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {(order.items || []).length} article{(order.items || []).length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td className="py-5 text-sm text-slate-600 font-medium whitespace-nowrap">
+                {new Date(order.created_at).toLocaleDateString('fr-FR')}
+              </td>
+              <td className="py-5 text-sm">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                  order.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' :
+                  order.status === 'shipped' ? 'bg-blue-50 text-blue-600' :
+                  order.status === 'confirmed' ? 'bg-indigo-50 text-indigo-600' :
+                  order.status === 'cancelled' ? 'bg-rose-50 text-rose-600' :
+                  'bg-amber-50 text-amber-600'
+                }`}>
+                  {order.status === 'delivered' ? '✓ Livré' :
+                   order.status === 'shipped' ? '🚚 Expédié' :
+                   order.status === 'confirmed' ? '✓ Confirmé' :
+                   order.status === 'cancelled' ? '✗ Annulé' :
+                   '⏳ En attente'}
+                </span>
+              </td>
+              <td className="py-5 text-sm text-slate-900 font-bold whitespace-nowrap">
+                {Number(order.total_amount || 0).toFixed(2)} €
+              </td>
+              <td className="py-5 text-right">
+                <button className="text-xs font-bold text-slate-400 hover:text-[#3653E2] transition-colors">
+                  Détails
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 
 export default function ProfilePage() {
   const { user, logout, isAuthenticated } = useAuth()
@@ -241,178 +345,103 @@ export default function ProfilePage() {
           {/* ──── CONTENT (Right) ──── */}
           <div className="lg:col-span-9 space-y-8">
             
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { icon: Package, label: 'Commandes totales', val: profile?.orders_count || 0, sub: 'Sur votre compte', color: 'text-blue-600', bg: 'bg-blue-50' },
-                { icon: Star, label: 'Points de fidélité', val: profile?.loyalty_points || 0, sub: 'Statut Membre', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                { icon: ShieldCheck, label: 'Économies réalisées', val: `${profile?.total_savings || 0} €`, sub: 'Sur l\'année', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              ].map((stat, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-5"
-                >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
-                    <stat.icon size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-                    <p className="text-xl font-bold text-slate-900">{stat.val}</p>
-                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">{stat.sub}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Personal Infos */}
-            <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">Informations Personnelles</h3>
-                  <p className="text-sm text-slate-500">Gérez vos informations de base et vos coordonnées.</p>
+            {/* Conditional Content based on activeTab */}
+            {activeTab === 'overview' && (
+              <>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { icon: Package, label: 'Commandes totales', val: profile?.orders_count || 0, sub: 'Sur votre compte', color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { icon: Star, label: 'Points de fidélité', val: profile?.loyalty_points || 0, sub: 'Statut Membre', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                    { icon: ShieldCheck, label: 'Économies réalisées', val: `${profile?.total_savings || 0} €`, sub: 'Sur l\'année', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                  ].map((stat, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-5"
+                    >
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
+                        <stat.icon size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{stat.label}</p>
+                        <p className="text-xl font-bold text-slate-900">{stat.val}</p>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">{stat.sub}</p>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-                <button 
-                  onClick={openEditModal}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
-                >
-                  Modifier le profil
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
-                {[
-                  { icon: User, label: 'Nom Complet', val: profile?.name || user?.name },
-                  { icon: Mail, label: 'Adresse Email', val: profile?.email || user?.email },
-                  { icon: Phone, label: 'Téléphone', val: profile?.phone || 'Non renseigné' },
-                  { icon: Calendar, label: 'Date d\'anniversaire', val: profile?.birthday ? new Date(profile.birthday).toLocaleDateString() : 'Non renseignée' },
-                ].map((info, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    <div className="p-2 bg-slate-50 rounded-lg text-slate-400 mt-0.5">
-                      <info.icon size={18} />
-                    </div>
+                {/* Personal Infos */}
+                <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                     <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{info.label}</p>
-                      <p className="text-sm font-bold text-slate-800">{info.val}</p>
+                      <h3 className="text-xl font-bold text-slate-900 mb-1">Informations Personnelles</h3>
+                      <p className="text-sm text-slate-500">Gérez vos informations de base et vos coordonnées.</p>
                     </div>
+                    <button 
+                      onClick={openEditModal}
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      Modifier le profil
+                    </button>
                   </div>
-                ))}
-              </div>
-            </section>
 
-            {/* Recent Orders */}
-            <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">Commandes Récentes</h3>
-                  <p className="text-sm text-slate-500">Suivez l'état de vos derniers achats.</p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                {loading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-16 rounded-2xl bg-slate-50 animate-pulse" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                    {[
+                      { icon: User, label: 'Nom Complet', val: profile?.name || user?.name },
+                      { icon: Mail, label: 'Adresse Email', val: profile?.email || user?.email },
+                      { icon: Phone, label: 'Téléphone', val: profile?.phone || 'Non renseigné' },
+                      { icon: Calendar, label: 'Date d\'anniversaire', val: profile?.birthday ? new Date(profile.birthday).toLocaleDateString() : 'Non renseignée' },
+                    ].map((info, i) => (
+                      <div key={i} className="flex items-start gap-4">
+                        <div className="p-2 bg-slate-50 rounded-lg text-slate-400 mt-0.5">
+                          <info.icon size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{info.label}</p>
+                          <p className="text-sm font-bold text-slate-800">{info.val}</p>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                ) : orders.length > 0 ? (
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-50">
-                        <th className="pb-4 font-bold">N° Commande</th>
-                        <th className="pb-4 font-bold">Articles</th>
-                        <th className="pb-4 font-bold">Date</th>
-                        <th className="pb-4 font-bold">Statut</th>
-                        <th className="pb-4 font-bold">Total</th>
-                        <th className="pb-4 font-bold">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {orders.map((order) => (
-                        <tr key={order.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="py-5 font-bold text-sm text-[#3653E2]">#{order.id}</td>
-                          
-                          {/* Product images + names */}
-                          <td className="py-5">
-                            <div className="flex items-center gap-2">
-                              {(order.items || []).slice(0, 3).map((item, idx) => (
-                                <div key={idx} className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
-                                  <img
-                                    src={item.product?.images?.[0]
-                                      ? (item.product.images[0].startsWith('http')
-                                          ? item.product.images[0]
-                                          : `http://localhost:8000/storage/${item.product.images[0]}`)
-                                      : item.product?.image || 'https://via.placeholder.com/40'}
-                                    alt={item.product?.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ))}
-                              {(order.items || []).length > 3 && (
-                                <span className="text-xs font-bold text-slate-400">+{(order.items || []).length - 3}</span>
-                              )}
-                              <div className="ml-1">
-                                <p className="text-xs font-bold text-slate-800 line-clamp-1">
-                                  {order.items?.[0]?.product?.name || 'Commande'}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
-                                  {(order.items || []).length} article{(order.items || []).length > 1 ? 's' : ''}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-5 text-sm text-slate-600 font-medium whitespace-nowrap">
-                            {new Date(order.created_at).toLocaleDateString('fr-FR')}
-                          </td>
-
-                          <td className="py-5 text-sm">
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
-                              order.status === 'delivered'  ? 'bg-emerald-50 text-emerald-600' :
-                              order.status === 'shipped'    ? 'bg-blue-50 text-blue-600' :
-                              order.status === 'confirmed'  ? 'bg-indigo-50 text-indigo-600' :
-                              order.status === 'cancelled'  ? 'bg-rose-50 text-rose-600' :
-                              'bg-amber-50 text-amber-600'
-                            }`}>
-                              {order.status === 'delivered'  ? '✓ Livré' :
-                               order.status === 'shipped'   ? '🚚 Expédié' :
-                               order.status === 'confirmed' ? '✓ Confirmé' :
-                               order.status === 'cancelled' ? '✗ Annulé' :
-                               '⏳ En attente'}
-                            </span>
-                          </td>
-
-                          <td className="py-5 text-sm text-slate-900 font-bold whitespace-nowrap">
-                            {Number(order.total_amount || 0).toFixed(2)} €
-                          </td>
-
-                          <td className="py-5">
-                            <button className="text-xs font-bold text-slate-400 hover:text-[#3653E2] transition-colors">
-                              Détails
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="text-center py-20 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50">
-                    <Package size={48} className="mx-auto text-slate-300 mb-6" />
-                    <h3 className="text-xl font-bold text-[#111827] mb-2">Aucune commande</h3>
-                    <p className="text-slate-500 mb-8">Vous n'avez pas encore passé de commande.</p>
-                    <Link
-                      to="/shop"
-                      className="inline-flex h-12 px-8 rounded-xl bg-[#3653E2] text-white font-bold items-center shadow-lg shadow-[#3653E2]/20 hover:scale-105 transition-all"
-                    >
-                      Commencer mes achats
-                    </Link>
+                </section>
+                
+                {/* Recent Orders Short list */}
+                <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8">
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 mb-1">Commandes Récentes</h3>
+                      <p className="text-sm text-slate-500">Vos 3 derniers achats.</p>
+                    </div>
+                    <button onClick={() => setActiveTab('orders')} className="text-xs font-bold text-[#3653E2] hover:underline">Voir tout</button>
                   </div>
-                )}
-              </div>
-            </section>
+                  <OrdersTable orders={orders.slice(0, 3)} loading={loading} />
+                </section>
+              </>
+            )}
+
+            {activeTab === 'orders' && (
+              <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8">
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-900 mb-1">Historique des Commandes</h3>
+                  <p className="text-sm text-slate-500">Retrouvez toutes vos commandes passées.</p>
+                </div>
+                <OrdersTable orders={orders} loading={loading} />
+              </section>
+            )}
+
+            {activeTab !== 'overview' && activeTab !== 'orders' && (
+              <section className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-20 text-center">
+                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield size={32} className="text-slate-300" />
+                 </div>
+                 <h3 className="text-xl font-bold text-slate-900 mb-2">Section en cours de développement</h3>
+                 <p className="text-slate-500 max-w-sm mx-auto">Cette fonctionnalité sera disponible prochainement dans une mise à jour.</p>
+              </section>
+            )}
 
           </div>
         </div>

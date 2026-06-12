@@ -20,6 +20,7 @@ import {
 import { useOrderSummary } from '../hooks/useCheckoutHooks'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { ordersAPI } from '../services/api'
 
 
 // --- SHARED COMPONENTS (Simplified for this file) ---
@@ -74,9 +75,10 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { data: summary, isLoading: isSummaryLoading } = useOrderSummary();
-  const { clearCart } = useCart();
+  const { clearCart, cartItems } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [orderError, setOrderError] = useState(null);
   
   const {
     register,
@@ -86,17 +88,63 @@ export default function PaymentPage() {
 
   const onSubmit = async (data) => {
     setIsProcessing(true);
-    // Simulation d'un appel API de paiement
-    setTimeout(() => {
+    setOrderError(null);
+
+    try {
+      // Récupérer l'adresse de livraison depuis sessionStorage
+      const shippingRaw = sessionStorage.getItem('shipping_data');
+      const shipping = shippingRaw ? JSON.parse(shippingRaw) : null;
+
+      if (!shipping) {
+        setOrderError('Adresse de livraison manquante. Veuillez retourner à l\'étape précédente.');
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!cartItems || cartItems.length === 0) {
+        setOrderError('Votre panier est vide.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Construire le payload de commande
+      const orderPayload = {
+        items: cartItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+        shipping_address: {
+          street: `${shipping.first_name} ${shipping.last_name} - ${shipping.address}`,
+          city: shipping.city,
+          zip: shipping.postal_code,
+          country: 'France',
+        },
+        notes: shipping.notes || null,
+      };
+
+      // Créer la commande dans la base de données
+      const response = await ordersAPI.create(orderPayload);
+      const createdOrder = response.data.data;
+
+      // Vider le panier
+      await clearCart();
+
+      // Nettoyer les données temporaires
+      sessionStorage.removeItem('shipping_data');
+
       setIsProcessing(false);
       setShowSuccess(true);
-      clearCart();
-      
-      // Delai supplémentaire pour apprécier l'animation de succès
+
+      // Naviguer vers la confirmation avec les détails de la commande
       setTimeout(() => {
-        navigate('/checkout/confirmation');
+        navigate('/checkout/confirmation', { state: { order: createdOrder } });
       }, 1500);
-    }, 2000);
+
+    } catch (err) {
+      setIsProcessing(false);
+      const msg = err.response?.data?.message || 'Une erreur est survenue lors de la création de votre commande.';
+      setOrderError(msg);
+    }
   };
 
   const steps = [
@@ -168,6 +216,12 @@ export default function PaymentPage() {
                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Virement</span>
                     </button>
                  </div>
+
+                  {orderError && (
+                    <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 text-sm font-bold mb-4">
+                      ⚠️ {orderError}
+                    </div>
+                  )}
 
                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                     <div className="space-y-2 text-left">

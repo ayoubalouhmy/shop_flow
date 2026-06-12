@@ -193,13 +193,9 @@ export default function CheckoutPage() {
   });
 
   const onSubmit = async (data) => {
-    try {
-      await saveShipping(data);
-      navigate('/checkout/payment');
-    } catch (err) {
-      console.warn("Backend checkout endpoint may be missing, proceeding anyway for demo...");
-      navigate('/checkout/payment');
-    }
+    // Save shipping info to sessionStorage so PaymentPage can use it when creating the order
+    sessionStorage.setItem('shipping_data', JSON.stringify(data));
+    navigate('/checkout/payment');
   };
 
   const steps = [

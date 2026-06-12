@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   ShoppingBag,
   CheckCircle2,
@@ -22,7 +22,7 @@ const Navbar = ({ isDarkMode, setIsDarkMode }) => {
           <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#3653E2]">
             <ShoppingBag size={18} className="text-white" />
           </div>
-          <span className={`font-bold text-lg tracking-tight ${isDarkMode ? 'text-white' : 'text-[#171a1f]'}`}>Shop<span className="text-[#3653E2]">Flow</span></span>
+          <span className={`font-bold text-lg tracking-tight ${isDarkMode ? 'text-white' : 'text-[#111827]'}`}>Shop<span className="text-[#3653E2]">Flow</span></span>
         </Link>
         <div className="flex items-center gap-4">
              <button onClick={() => { setIsDarkMode(!isDarkMode); document.documentElement.classList.toggle('dark'); }} className="p-2 text-slate-500 hover:text-slate-900 transition-all">
@@ -39,8 +39,19 @@ const Navbar = ({ isDarkMode, setIsDarkMode }) => {
 
 export default function ConfirmationPage() {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  const orderNumber = "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-  const date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const location = useLocation();
+
+  // Lire les données de la commande depuis la navigation state (passée par PaymentPage)
+  const order = location.state?.order || null;
+
+  // Numéro de commande et date depuis la vraie donnée ou fallback
+  const orderNumber = order ? `#${order.id}` : 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+  const date = order?.created_at
+    ? new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const totalAmount = order?.total_amount
+    ? Number(order.total_amount).toFixed(2) + ' €'
+    : null;
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'} selection:bg-[#3653E2]/10 selection:text-[#3653E2] font-sans`}>
@@ -65,7 +76,7 @@ export default function ConfirmationPage() {
            transition={{ delay: 0.2 }}
         >
             <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111827] mb-4">Merci pour votre commande !</h1>
-            <p className="text-lg text-slate-500 mb-12 max-w-lg mx-auto">Votre paiement a été traité avec succès. Nous préparons déjà votre colis avec le plus grand soin.</p>
+            <p className="text-lg text-slate-500 mb-12 max-w-lg mx-auto">Votre commande a été enregistrée avec succès. Nous préparons déjà votre colis avec le plus grand soin.</p>
         </motion.div>
 
         {/* Order Details Card */}
@@ -85,6 +96,12 @@ export default function ConfirmationPage() {
                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date de commande</h4>
                    <p className="text-base font-bold text-[#111827]">{date}</p>
                 </div>
+                {totalAmount && (
+                  <div>
+                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Montant total</h4>
+                     <p className="text-base font-bold text-[#3653E2]">{totalAmount}</p>
+                  </div>
+                )}
                 <div>
                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Méthode de livraison</h4>
                    <p className="text-base font-bold text-[#111827]">Standard (3-5 jours)</p>

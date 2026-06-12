@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import api from "../../utils/api";
 
 // ── Icons (inline SVG, no extra dependency) ──
 const Icon = ({ d, size = 18 }) => (
@@ -68,23 +70,41 @@ const ShopBagIcon = () => (
   </svg>
 );
 
-// ── Nav Items Config ──
-const navItems = [
-  { to: "/admin", label: "Dashboard", Icon: GridIcon, end: true },
-  { to: "/admin/products", label: "Produits", Icon: BoxIcon, badge: "1284" },
-  { to: "/admin/orders", label: "Commandes", Icon: OrdersIcon, badge: "7" },
-  { to: "/admin/customers", label: "Clients", Icon: UsersIcon },
-  { to: "/admin/settings", label: "Paramètres", Icon: SettingsIcon },
-];
-
 export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ products: 0, orders: 0, users: 0 });
+
+  useEffect(() => {
+    const fetchSidebarStats = async () => {
+      try {
+        const response = await api.get("/admin/dashboard");
+        if (response.data.success) {
+          setStats({
+            products: response.data.data.products.total,
+            orders: response.data.data.orders.total,
+            users: response.data.data.users.total
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching sidebar stats:", error);
+      }
+    };
+    fetchSidebarStats();
+  }, []);
 
   const handleLogout = () => {
     if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
       navigate("/login");
     }
   };
+
+  const navItems = [
+    { to: "/admin", label: "Dashboard", Icon: GridIcon, end: true },
+    { to: "/admin/products", label: "Produits", Icon: BoxIcon, badge: stats.products },
+    { to: "/admin/orders", label: "Commandes", Icon: OrdersIcon, badge: stats.orders },
+    { to: "/admin/customers", label: "Clients", Icon: UsersIcon, badge: stats.users },
+    { to: "/admin/settings", label: "Paramètres", Icon: SettingsIcon },
+  ];
 
   return (
     <>
@@ -119,7 +139,9 @@ export default function Sidebar({ isOpen, onClose }) {
             >
               <NavIcon />
               <span>{label}</span>
-              {badge && <span className="sf-nav-badge">{badge}</span>}
+              {badge !== undefined && badge > 0 && (
+                <span className="sf-nav-badge">{badge}</span>
+              )}
             </NavLink>
           ))}
         </div>
@@ -148,4 +170,4 @@ export default function Sidebar({ isOpen, onClose }) {
       </aside>
     </>
   );
-}
+}

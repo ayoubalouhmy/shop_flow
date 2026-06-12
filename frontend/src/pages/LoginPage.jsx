@@ -110,8 +110,12 @@ export default function LoginPage() {
       setLoading(false)
       
       
-      // Redirection directe vers l'accueil
-      navigate('/')
+      // Redirection selon le rôle
+      if (userData.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
     } catch (err) {
       console.error(err)
       setLoading(false)

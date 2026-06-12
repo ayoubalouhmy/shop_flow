@@ -1,27 +1,27 @@
-import { recentOrders } from "../../data/adminData";
-
 const statusConfig = {
-  "Livré":      { cls: "sf-badge-success", dot: "#22c55e" },
-  "En cours":   { cls: "sf-badge-info",    dot: "#3b82f6" },
-  "Expédié":    { cls: "sf-badge-primary", dot: "#3653E2" },
-  "En attente": { cls: "sf-badge-warning", dot: "#f59e0b" },
-  "Annulé":     { cls: "sf-badge-danger",  dot: "#ef4444" },
+  "delivered": { cls: "sf-badge-success", label: "Livré",      dot: "#22c55e" },
+  "pending":   { cls: "sf-badge-warning", label: "En attente", dot: "#f59e0b" },
+  "confirmed": { cls: "sf-badge-info",    label: "Confirmé",   dot: "#3b82f6" },
+  "shipped":   { cls: "sf-badge-primary", label: "Expédié",    dot: "#3653E2" },
+  "cancelled": { cls: "sf-badge-danger",  label: "Annulé",     dot: "#ef4444" },
 };
 
 function StatusBadge({ status }) {
-  const cfg = statusConfig[status] || { cls: "sf-badge-muted", dot: "#9ca3af" };
+  const cfg = statusConfig[status] || { cls: "sf-badge-muted", label: status, dot: "#9ca3af" };
   return (
     <span className={`sf-badge ${cfg.cls}`}>
       <span style={{
         width: 6, height: 6, borderRadius: "50%",
         background: cfg.dot, display: "inline-block", flexShrink: 0
       }} />
-      {status}
+      {cfg.label}
     </span>
   );
 }
 
-export default function RecentOrdersTable() {
+export default function RecentOrdersTable({ orders }) {
+  const displayOrders = orders || [];
+
   return (
     <div className="sf-card">
       <div className="sf-card-header">
@@ -45,20 +45,26 @@ export default function RecentOrdersTable() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map(order => (
+              {displayOrders.map(order => (
                 <tr key={order.id}>
                   <td>
-                    <span className="sf-order-id">{order.id}</span>
+                    <span className="sf-order-id">#{order.id}</span>
                   </td>
                   <td>
                     <div className="sf-customer-cell">
-                      <div className="sf-avatar-sm">{order.avatar}</div>
-                      <span style={{ fontWeight: 500 }}>{order.customer}</span>
+                      <div className="sf-avatar-sm">
+                        {order.user?.name?.charAt(0) || "U"}
+                      </div>
+                      <span style={{ fontWeight: 500 }}>{order.user?.name || "Client Inconnu"}</span>
                     </div>
                   </td>
                   <td><StatusBadge status={order.status} /></td>
-                  <td style={{ color: "var(--sf-muted)" }}>{order.date}</td>
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{order.amount}</td>
+                  <td style={{ color: "var(--sf-muted)" }}>
+                    {new Date(order.created_at).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td style={{ textAlign: "right", fontWeight: 700 }}>
+                    {order.total_amount.toLocaleString("fr-FR")} €
+                  </td>
                 </tr>
               ))}
             </tbody>

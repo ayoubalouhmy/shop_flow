@@ -1,49 +1,30 @@
 import { useNavigate } from "react-router-dom";
+import { Package, Users, Settings, Plus, ArrowRight } from "lucide-react";
 
 const actions = [
   {
-    label: "Vérifier l'Inventaire",
-    desc: "12 articles en stock critique",
-    iconBg: "#eef0fd",
+    label: "Produits",
+    desc: "Gérer l'inventaire et les prix",
+    iconBg: "#eef2ff",
     iconColor: "#3653E2",
     to: "/admin/products",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-        <line x1="12" y1="22.08" x2="12" y2="12" />
-      </svg>
-    ),
+    icon: <Package size={20} />,
   },
   {
-    label: "Gérer les Clients",
-    desc: "4 nouvelles demandes de support",
-    iconBg: "#FDEDDD",
-    iconColor: "#F97316",
+    label: "Clients",
+    desc: "Liste des utilisateurs actifs",
+    iconBg: "#f0fdf4",
+    iconColor: "#16a34a",
     to: "/admin/customers",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
+    icon: <Users size={20} />,
   },
   {
-    label: "Plus d'outils",
-    desc: "Configuration et intégrations",
-    iconBg: "#171A1F",
-    iconColor: "#fff",
+    label: "Configuration",
+    desc: "Réglages de la plateforme",
+    iconBg: "#fef2f2",
+    iconColor: "#dc2626",
     to: "/admin/settings",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-      </svg>
-    ),
+    icon: <Settings size={20} />,
   },
 ];
 
@@ -51,31 +32,39 @@ export default function QuickActions() {
   const navigate = useNavigate();
 
   return (
-    <div>
-      <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sf-muted)",
-        textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>
-        Actions Rapides
-      </h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-slate-800 tracking-tight">Raccourcis</h3>
+        <button className="text-[12px] font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest">
+           Personnaliser
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {actions.map(action => (
           <button
             key={action.label}
-            className="sf-quick-action"
+            className="group flex flex-col p-6 bg-white border border-slate-100 rounded-[24px] text-left hover:border-[#3653E2] hover:shadow-xl hover:shadow-[#3653E2]/5 transition-all outline-none"
             onClick={() => navigate(action.to)}
           >
             <div
-              className="sf-quick-action-icon"
-              style={{ background: action.iconBg, color: action.iconColor }}
+               className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+               style={{ background: action.iconBg, color: action.iconColor }}
             >
               {action.icon}
             </div>
-            <div>
-              <div className="sf-quick-action-label">{action.label}</div>
-              <div className="sf-quick-action-desc">{action.desc}</div>
+            <div className="flex items-center justify-between w-full">
+               <div>
+                  <div className="text-sm font-bold text-slate-900 mb-1">{action.label}</div>
+                  <div className="text-[11px] text-slate-500 font-medium">{action.desc}</div>
+               </div>
+               <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#3653E2] group-hover:text-white transition-all">
+                  <ArrowRight size={14} />
+               </div>
             </div>
           </button>
         ))}
       </div>
     </div>
   );
-}
+}

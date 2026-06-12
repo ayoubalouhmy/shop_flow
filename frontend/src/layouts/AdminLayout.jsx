@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/admin/Sidebar";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import "../styles/admin.css";
@@ -9,7 +10,14 @@ import "../styles/admin.css";
  * Uses React Router's <Outlet /> to render child routes.
  */
 export default function AdminLayout() {
+  const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (loading) return null; // Ou un composant de chargement
+
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="admin-root">
